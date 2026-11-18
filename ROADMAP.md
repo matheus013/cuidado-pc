@@ -65,3 +65,11 @@ Criar um aplicativo de desktop para Windows e macOS que ajude pessoas a entender
 - A identificação de arquivos temporários não prova que são dispensáveis; a prévia e o controle do usuário são essenciais.
 - Reparos automáticos, limpeza de registro e otimizações agressivas ficam fora do MVP até existir justificativa, documentação e testes adequados.
 - Datas, equipe, licenciamento e modelo de distribuição ainda não foram definidos; o roadmap é uma ordem de trabalho, não um cronograma fechado.
+
+## Próximos passos após a versão de diagnóstico
+
+- Ampliar a análise de forma controlada por categorias e pastas escolhidas pelo usuário, com indicação clara de arquivos protegidos, pessoais e em uso.
+- Substituir a lista de valores por um modelo escalável com filtros, ordenação e progresso/cancelamento da análise.
+- Investigar identificação de dependências ausentes por aplicativo e integração com fontes confiáveis, sem sugerir downloads avulsos de DLLs.
+- Investigar fontes adicionais de atualização de aplicativos para macOS e Windows, incluindo limites de cobertura de cada fonte.
+- Testar SFC, winget, permissões e saída localizada em instalações reais de Windows; testar erros e cancelamento no macOS.

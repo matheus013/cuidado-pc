@@ -1,18 +1,21 @@
 # Cuidado PC
 
-Protótipo multiplataforma de diagnóstico e limpeza de arquivos temporários, com backend em C++17 e interface em Qt Quick/QML. Não requer Python em tempo de execução.
+Protótipo para Windows e macOS com C++17, Qt e QML. Oferece diagnóstico de armazenamento, análise de temporários e acesso a verificações do sistema, sem instalar atualizações ou executar reparos automaticamente.
 
-## Funcionalidades
+## O que faz
 
-- Diagnóstico de sistema e armazenamento.
-- Prévia de arquivos comuns diretamente na pasta temporária com mais de sete dias.
-- Exclusão dos arquivos listados após confirmação, com revalidação de idade, tamanho e data.
+- **Limpeza:** percorre a pasta temporária do usuário e suas subpastas, listando arquivos comuns com mais de sete dias, até 10.000 resultados. Nenhum item é selecionado inicialmente. É possível escolher itens individualmente ou marcar todos, ver o tamanho selecionado e confirmar a exclusão.
+- **Windows:** executa `sfc /verifyonly` para verificar arquivos protegidos do sistema, incluindo DLLs protegidas. O comando exige privilégios de administrador; se não estiverem disponíveis, a saída mostrará o erro. Não identifica todas as DLLs ausentes de aplicativos. A busca por atualizações usa `winget upgrade --disable-interactivity`, quando o winget está instalado e suas fontes estão disponíveis. Não abrange todos os aplicativos nem substitui o Windows Update.
+- **macOS:** executa `diskutil verifyVolume /` para verificar o volume montado; isso não equivale à verificação dos arquivos protegidos do Windows. `softwareupdate --list` consulta atualizações do macOS disponíveis, mas não lista todos os aplicativos de terceiros ou da App Store.
+- A saída das ferramentas é mostrada ao usuário e pode exigir interpretação; um código de saída zero por si só não prova que tudo está saudável ou atualizado. As verificações podem levar tempo e a busca por atualizações pode acessar a rede.
 
-A exclusão é permanente, não usa a lixeira e se aplica à lista inteira. A idade não garante que um arquivo seja dispensável: revise a lista. Arquivos alterados ou inacessíveis são ignorados. A verificação e exclusão não são atômicas; um arquivo pode mudar entre essas etapas. Não há reparos automáticos, histórico nem seleção individual.
+## Limites da limpeza
+
+Esta não é uma análise completa de todos os arquivos do computador. Pastas inacessíveis podem ser omitidas. Idade e localização não garantem que um arquivo seja dispensável. A exclusão é **permanente**, sem lixeira, e somente para itens selecionados e confirmados. Antes de excluir, o aplicativo verifica caminho, tipo, tamanho, data e idade novamente; essas verificações não são atômicas. Não segue links simbólicos durante a busca. Não limpa outras pastas pessoais, arquivos do sistema, navegadores ou registros.
 
 ## Compilar
 
-Requisitos: Qt 6.5 ou posterior com Core, Gui, Qml, Quick, Quick Controls 2 e Test; CMake 3.21 ou posterior; compilador C++17. Instale Qt para sua plataforma e selecione o compilador correspondente. No terminal:
+Requisitos: Qt 6.5 ou posterior (Core, Gui, Qml, Quick, Quick Controls 2, Concurrent e Test), CMake 3.21 ou posterior e compilador C++17. No terminal:
 
 ```sh
 cmake -S . -B build -DCMAKE_PREFIX_PATH="CAMINHO_PARA_QT"
@@ -20,10 +23,10 @@ cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-Substitua `CAMINHO_PARA_QT` pelo diretório do kit Qt (por exemplo, `.../6.8.3/macos` ou `.../6.8.3/msvc2022_64`). No Windows, abra o executável em `build/Release/`; no macOS, abra `build/cuidado-pc.app` ou o bundle dentro de `build/Release/`, conforme o gerador. Ao distribuir para outro computador, use as ferramentas de implantação do Qt (`windeployqt` ou `macdeployqt`) e cumpra os termos de licença das bibliotecas Qt escolhidas.
+Substitua `CAMINHO_PARA_QT` pelo diretório do kit Qt. No Windows, abra o executável em `build/Release/`; no macOS, abra `build/cuidado-pc.app` ou `build/Release/cuidado-pc.app`, conforme o gerador. Para distribuição, use `windeployqt` ou `macdeployqt` e cumpra as licenças das dependências Qt.
 
-O repositório inclui uma configuração de CI para compilar e testar no Windows e macOS. A interface e os instaladores ainda precisam de validação em máquinas reais.
+O fluxo de CI compila e testa no Windows e macOS. O protótipo ainda não possui instalador, reparos, histórico, verificação de todos os softwares ou inventário completo de arquivos.
 
 ## Licença
 
-O código do projeto é disponibilizado sob a [licença MIT](LICENSE). O Qt e outras dependências têm licenças próprias, que devem ser consideradas na distribuição.
+O código é disponibilizado sob a [licença MIT](LICENSE). Qt e outras dependências têm licenças próprias.

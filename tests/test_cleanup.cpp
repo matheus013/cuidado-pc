@@ -1,5 +1,6 @@
 #include "cleanup.h"
 #include <QFile>
+#include <QDir>
 #include <QTemporaryDir>
 #include <QtTest>
 
@@ -20,6 +21,21 @@ private slots:
         auto result = cleanFiles(dir.path(), list, now);
         QCOMPARE(result.removed, 1); QCOMPARE(result.skipped, 1);
         QVERIFY(!QFile::exists(dir.filePath("old"))); QVERIFY(QFile::exists(dir.filePath("changed"))); QVERIFY(QFile::exists(dir.filePath("recent")));
+    }
+    void recursiveScanAndLimit() {
+        QTemporaryDir dir; QVERIFY(dir.isValid());
+        QVERIFY(QDir(dir.path()).mkdir("nested"));
+        const auto now = QDateTime::currentDateTimeUtc();
+        for (const auto &name : {QStringLiteral("one"), QStringLiteral("nested/two")}) {
+            QFile f(dir.filePath(name)); QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write("data"); QVERIFY(f.flush()); QVERIFY(f.setFileTime(now.addDays(-8), QFileDevice::FileModificationTime)); f.close();
+        }
+        const auto scan = scanRecursive(dir.path(), 10, now);
+        QCOMPARE(scan.files.size(), 2); QVERIFY(!scan.truncated);
+        const auto limited = scanRecursive(dir.path(), 1, now);
+        QCOMPARE(limited.files.size(), 1); QVERIFY(limited.truncated);
+        const auto result = cleanFiles(dir.path(), {scan.files.last()}, now);
+        QCOMPARE(result.removed, 1); QCOMPARE(result.skipped, 0);
     }
     void outsidePath() {
         QTemporaryDir a, b; QVERIFY(a.isValid()); QVERIFY(b.isValid());
