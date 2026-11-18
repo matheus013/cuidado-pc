@@ -9,6 +9,10 @@ Protótipo para Windows e macOS com C++17, Qt e QML. Oferece diagnóstico de arm
 - **macOS:** executa `diskutil verifyVolume /` para verificar o volume montado; isso não equivale à verificação dos arquivos protegidos do Windows. `softwareupdate --list` consulta atualizações do macOS disponíveis, mas não lista todos os aplicativos de terceiros ou da App Store.
 - A saída das ferramentas é mostrada ao usuário e pode exigir interpretação; um código de saída zero por si só não prova que tudo está saudável ou atualizado. As verificações podem levar tempo e a busca por atualizações pode acessar a rede.
 
+## Inicialização automática
+
+O aplicativo faz uma verificação rápida ao abrir: ela examina apenas arquivos diretamente na pasta temporária com mais de sete dias, sem excluir nada. Em **Inicialização**, é possível ativar a abertura ao entrar na conta do Windows ou macOS. No Windows usa a chave Run do usuário; no macOS cria um LaunchAgent na pasta do usuário. A ativação vale para o caminho atual do executável: após mover ou reinstalar, desative e ative novamente. Desativar pelo aplicativo remove a configuração. Esta função não foi validada por reinício de sessão em ambos os sistemas.
+
 ## Limites da limpeza
 
 Esta não é uma análise completa de todos os arquivos do computador. Pastas inacessíveis podem ser omitidas. Idade e localização não garantem que um arquivo seja dispensável. A exclusão é **permanente**, sem lixeira, e somente para itens selecionados e confirmados. Antes de excluir, o aplicativo verifica caminho, tipo, tamanho, data e idade novamente; essas verificações não são atômicas. Não segue links simbólicos durante a busca. Não limpa outras pastas pessoais, arquivos do sistema, navegadores ou registros.

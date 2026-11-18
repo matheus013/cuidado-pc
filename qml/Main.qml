@@ -4,7 +4,7 @@ import QtQuick.Layouts
 
 ApplicationWindow {
     id: window
-    width: 1040; height: 760; minimumWidth: 760; minimumHeight: 600
+    width: 1040; height: 760; minimumWidth: 960; minimumHeight: 600
     visible: true; title: "Cuidado PC"; color: "#f3f6fb"
     palette.window: "#f3f6fb"; palette.windowText: "#17283f"; palette.text: "#17283f"
     palette.buttonText: "#17283f"; palette.button: "#ffffff"; palette.base: "#ffffff"
@@ -17,8 +17,32 @@ ApplicationWindow {
         background: Rectangle { radius: 8; color: !control.enabled ? "#e8edf4" : control.primary ? (control.down ? "#1948aa" : control.hovered ? "#2257c0" : "#2863d9") : (control.hovered ? "#edf3fc" : "#ffffff"); border.color: control.primary ? "transparent" : "#d4deeb" }
     }
     component Card: Rectangle { color: "#ffffff"; radius: 12; border.color: "#dce5f0" }
-    ColumnLayout {
-        anchors.fill: parent; anchors.margins: 26; spacing: 13
+    property int currentPage: 0
+    RowLayout {
+        anchors.fill: parent; spacing: 0
+        Rectangle {
+            Layout.fillHeight: true; Layout.preferredWidth: 205; color: "#182940"
+            ColumnLayout {
+                anchors.fill: parent; anchors.margins: 18; spacing: 9
+                Label { text: "CUIDADO PC"; font.pixelSize: 17; font.bold: true; color: "#ffffff"; Layout.topMargin: 12; Layout.bottomMargin: 25 }
+                Repeater {
+                    model: ["Visão e limpeza", "Sistema e atualizações", "Inicialização"]
+                    delegate: Button {
+                        required property int index
+                        required property string modelData
+                        text: modelData
+                        Layout.fillWidth: true; implicitHeight: 45
+                        contentItem: Text { text: modelData; color: window.currentPage === index ? "#ffffff" : "#b5c4d6"; font.pixelSize: 13; font.bold: window.currentPage === index; verticalAlignment: Text.AlignVCenter; leftPadding: 12 }
+                        background: Rectangle { radius: 7; color: window.currentPage === index ? "#2c65bc" : parent.hovered ? "#263d59" : "transparent" }
+                        onClicked: window.currentPage = index
+                    }
+                }
+                Item { Layout.fillHeight: true }
+                Label { text: "Protótipo · Qt / C++"; font.pixelSize: 11; color: "#9aadc4" }
+            }
+        }
+        ColumnLayout {
+        Layout.fillWidth: true; Layout.fillHeight: true; Layout.margins: 24; spacing: 13
         RowLayout {
             Layout.fillWidth: true
             ColumnLayout {
@@ -33,13 +57,8 @@ ApplicationWindow {
             Layout.fillWidth: true; implicitHeight: diag.implicitHeight + 28
             Label { id: diag; anchors.fill: parent; anchors.margins: 14; text: backend.diagnostic; wrapMode: Text.WrapAnywhere; color: "#344b65"; font.pixelSize: 12; lineHeight: 1.25 }
         }
-        TabBar {
-            id: tabs; Layout.fillWidth: true
-            TabButton { text: "Limpeza"; contentItem: Text { text: parent.text; color: tabs.currentIndex === 0 ? "#1c57bc" : "#526781"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-            TabButton { text: "Sistema e atualizações"; contentItem: Text { text: parent.text; color: tabs.currentIndex === 1 ? "#1c57bc" : "#526781"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-        }
         StackLayout {
-            Layout.fillWidth: true; Layout.fillHeight: true; currentIndex: tabs.currentIndex
+            Layout.fillWidth: true; Layout.fillHeight: true; currentIndex: window.currentPage
             ColumnLayout {
                 spacing: 10
                 RowLayout {
@@ -49,7 +68,8 @@ ApplicationWindow {
                         Label { text: "Limpeza de temporários"; font.pixelSize: 18; font.bold: true; color: "#17283f" }
                         Label { text: "Escolha os arquivos que deseja remover"; font.pixelSize: 12; color: "#687b91" }
                     }
-                    ActionButton { text: backend.scanning ? "Analisando…" : "Analisar"; primary: true; enabled: !backend.scanning; onClicked: backend.scan() }
+                    ActionButton { text: "Verificação rápida"; enabled: !backend.scanning; onClicked: backend.quickScan() }
+                    ActionButton { text: backend.scanning ? "Analisando…" : "Análise de temporários"; primary: true; enabled: !backend.scanning; onClicked: backend.scan() }
                     ActionButton { text: "Excluir selecionados"; enabled: backend.selectedCount > 0 && !backend.scanning; onClicked: confirmDialog.open() }
                 }
                 Card {
@@ -57,7 +77,7 @@ ApplicationWindow {
                     ColumnLayout {
                         anchors.fill: parent; anchors.margins: 16; spacing: 8
                         Label { text: backend.summary; wrapMode: Text.Wrap; Layout.fillWidth: true; color: "#263e5b"; font.bold: true; font.pixelSize: 12 }
-                        Label { text: "Pasta temporária e subpastas · arquivos com mais de 7 dias · não selecionados por padrão"; wrapMode: Text.Wrap; Layout.fillWidth: true; color: "#687b91"; font.pixelSize: 12 }
+                        Label { text: "Arquivos temporários com mais de 7 dias · não selecionados por padrão"; wrapMode: Text.Wrap; Layout.fillWidth: true; color: "#687b91"; font.pixelSize: 12 }
                         RowLayout {
                             Layout.fillWidth: true
                             ActionButton { text: "Selecionar todos"; enabled: backend.count > 0; onClicked: backend.selectAll(true) }
@@ -112,6 +132,31 @@ ApplicationWindow {
                     }
                 }
             }
+            ColumnLayout {
+                spacing: 14
+                Label { text: "Inicialização"; color: "#17283f"; font.bold: true; font.pixelSize: 20 }
+                Label { text: "Abra o Cuidado PC ao entrar na sua conta e veja o resultado de uma verificação rápida."; color: "#526781"; font.pixelSize: 13; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                Card {
+                    Layout.fillWidth: true; implicitHeight: startupContents.implicitHeight + 36
+                    ColumnLayout {
+                        id: startupContents; anchors.fill: parent; anchors.margins: 18; spacing: 12
+                        RowLayout {
+                            Layout.fillWidth: true
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                Label { text: "Iniciar com o sistema"; color: "#17283f"; font.bold: true; font.pixelSize: 15 }
+                                Label { text: "Executa ao entrar na conta deste usuário"; color: "#687b91"; font.pixelSize: 12 }
+                            }
+                            ActionButton { text: backend.autoStart ? "Desativar" : "Ativar"; primary: !backend.autoStart; onClicked: backend.setAutoStart(!backend.autoStart) }
+                        }
+                        Label { text: backend.autoStart ? "Ativado" : "Desativado"; color: backend.autoStart ? "#177b53" : "#687b91"; font.bold: true }
+                        Label { text: backend.startupMessage; visible: text.length > 0; color: "#526781"; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                    }
+                }
+                Label { text: "A verificação rápida examina apenas arquivos antigos diretamente na pasta temporária. Nenhum arquivo é removido automaticamente. A análise de temporários também percorre subpastas."; color: "#526781"; font.pixelSize: 12; wrapMode: Text.Wrap; Layout.fillWidth: true }
+                Item { Layout.fillHeight: true }
+            }
+        }
         }
     }
     Dialog {

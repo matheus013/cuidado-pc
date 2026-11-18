@@ -16,6 +16,8 @@ class Backend : public QObject {
     Q_PROPERTY(QString selectedSize READ selectedSize NOTIFY changed)
     Q_PROPERTY(bool scanning READ scanning NOTIFY changed)
     Q_PROPERTY(bool running READ running NOTIFY changed)
+    Q_PROPERTY(bool autoStart READ autoStart NOTIFY changed)
+    Q_PROPERTY(QString startupMessage READ startupMessage NOTIFY changed)
     Q_PROPERTY(QString taskTitle READ taskTitle NOTIFY changed)
     Q_PROPERTY(QString taskOutput READ taskOutput NOTIFY changed)
 public:
@@ -28,10 +30,14 @@ public:
     QString selectedSize() const;
     bool scanning() const { return m_scanning; }
     bool running() const { return m_process.state() != QProcess::NotRunning; }
+    bool autoStart() const;
+    QString startupMessage() const { return m_startupMessage; }
     QString taskTitle() const { return m_taskTitle; }
     QString taskOutput() const { return m_taskOutput; }
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void scan();
+    Q_INVOKABLE void quickScan();
+    Q_INVOKABLE void setAutoStart(bool enabled);
     Q_INVOKABLE void setSelected(int index, bool selected);
     Q_INVOKABLE void selectAll(bool selected);
     Q_INVOKABLE void clean();
@@ -45,7 +51,8 @@ private:
     void appendOutput();
     QList<FileEntry> m_files;
     QSet<int> m_selected;
-    QString m_diagnostic, m_summary, m_taskTitle, m_taskOutput;
+    QString m_diagnostic, m_summary, m_taskTitle, m_taskOutput, m_startupMessage;
+    bool m_quick = false;
     bool m_scanning = false;
     QProcess m_process;
     QFutureWatcher<ScanResult> m_watcher;

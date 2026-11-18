@@ -1,5 +1,9 @@
 #include "backend.h"
 #include <QDir>
+#include <QCoreApplication>
+#include <QFile>
+#include <QSettings>
+#include <QXmlStreamWriter>
 #include <QFileInfo>
 #include <QStandardPaths>
 #include <QStorageInfo>
@@ -18,7 +22,7 @@ Backend::Backend(QObject *parent) : QObject(parent), m_summary(QStringLiteral("I
     connect(&m_watcher, &QFutureWatcher<ScanResult>::finished, this, [this] {
         auto result = m_watcher.result(); m_scanning = false; m_files = result.files; m_selected.clear();
         qint64 total = 0; for (const auto &f : m_files) total += f.size;
-        m_summary = result.error.isEmpty() ? QStringLiteral("%1 arquivos encontrados · %2%3. Acesso negado a pastas pode omitir arquivos.").arg(m_files.size()).arg(humanSize(total), result.truncated ? QStringLiteral(" · limite de 10.000 atingido") : QString()) : result.error;
+        m_summary = result.error.isEmpty() ? QStringLiteral("%1: %2 arquivos · %3%4. Pastas inacessíveis podem ser omitidas.").arg(m_quick ? QStringLiteral("Verificação rápida") : QStringLiteral("Análise completa de temporários")).arg(m_files.size()).arg(humanSize(total), result.truncated ? QStringLiteral(" · limite de 10.000 atingido") : QString()) : result.error;
         emit changed();
     });
     refresh();
@@ -31,8 +35,53 @@ void Backend::refresh() {
 }
 void Backend::scan() {
     if (m_scanning) return;
-    m_scanning = true; m_files.clear(); m_selected.clear(); m_summary = QStringLiteral("Analisando arquivos temporários…"); emit changed();
+    m_quick = false; m_scanning = true; m_files.clear(); m_selected.clear(); m_summary = QStringLiteral("Analisando arquivos temporários…"); emit changed();
     const auto root = QDir::tempPath(); m_watcher.setFuture(QtConcurrent::run([root] { return scanRecursive(root); }));
+}
+void Backend::quickScan() {
+    if (m_scanning) return;
+    m_quick = true; m_scanning = true; m_files.clear(); m_selected.clear();
+    m_summary = QStringLiteral("Executando verificação rápida da pasta temporária…"); emit changed();
+    const auto root = QDir::tempPath();
+    m_watcher.setFuture(QtConcurrent::run([root] { ScanResult r; if (!QFileInfo(root).isReadable()) r.error = QStringLiteral("Pasta temporária inacessível."); else r.files = scanFiles(root); return r; }));
+}
+static QString startupFile() { return QDir::home().filePath(QStringLiteral("Library/LaunchAgents/br.com.cuidadopc.startup.plist")); }
+bool Backend::autoStart() const {
+#ifdef Q_OS_MACOS
+    return QFile::exists(startupFile());
+#elif defined(Q_OS_WIN)
+    QSettings run(QStringLiteral("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"), QSettings::NativeFormat);
+    return run.contains(QStringLiteral("CuidadoPC"));
+#else
+    return false;
+#endif
+}
+void Backend::setAutoStart(bool enabled) {
+#ifdef Q_OS_MACOS
+    const QString path = startupFile();
+    if (!enabled) {
+        if (QFile::exists(path) && !QFile::remove(path)) { m_startupMessage = QStringLiteral("Não foi possível desativar a inicialização automática."); emit changed(); return; }
+    } else {
+        if (!QDir().mkpath(QFileInfo(path).absolutePath())) { m_startupMessage = QStringLiteral("Não foi possível criar a pasta de inicialização."); emit changed(); return; }
+        QFile file(path); if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) { m_startupMessage = QStringLiteral("Não foi possível salvar a configuração de inicialização."); emit changed(); return; }
+        QXmlStreamWriter xml(&file); xml.setAutoFormatting(true); xml.writeStartDocument();
+        xml.writeDTD(QStringLiteral("<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">"));
+        xml.writeStartElement(QStringLiteral("plist")); xml.writeAttribute(QStringLiteral("version"), QStringLiteral("1.0")); xml.writeStartElement(QStringLiteral("dict"));
+        xml.writeTextElement(QStringLiteral("key"), QStringLiteral("Label")); xml.writeTextElement(QStringLiteral("string"), QStringLiteral("br.com.cuidadopc.startup"));
+        xml.writeTextElement(QStringLiteral("key"), QStringLiteral("ProgramArguments")); xml.writeStartElement(QStringLiteral("array")); xml.writeTextElement(QStringLiteral("string"), QCoreApplication::applicationFilePath()); xml.writeEndElement();
+        xml.writeTextElement(QStringLiteral("key"), QStringLiteral("RunAtLoad")); xml.writeEmptyElement(QStringLiteral("true")); xml.writeEndElement(); xml.writeEndElement(); xml.writeEndDocument();
+        if (xml.hasError() || file.error() != QFileDevice::NoError) { m_startupMessage = QStringLiteral("Erro ao salvar a configuração de inicialização."); emit changed(); return; }
+        file.close();
+    }
+#elif defined(Q_OS_WIN)
+    QSettings run(QStringLiteral("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"), QSettings::NativeFormat);
+    if (enabled) run.setValue(QStringLiteral("CuidadoPC"), QStringLiteral("\"") + QDir::toNativeSeparators(QCoreApplication::applicationFilePath()) + QStringLiteral("\""));
+    else run.remove(QStringLiteral("CuidadoPC"));
+    run.sync(); if (run.status() != QSettings::NoError) { m_startupMessage = QStringLiteral("Não foi possível salvar a configuração de inicialização."); emit changed(); return; }
+#else
+    Q_UNUSED(enabled); m_startupMessage = QStringLiteral("Inicialização automática indisponível neste sistema."); emit changed(); return;
+#endif
+    m_startupMessage = enabled ? QStringLiteral("Ativada para a próxima entrada na conta. Se mover o aplicativo, desative e ative novamente.") : QStringLiteral("Inicialização automática desativada."); emit changed();
 }
 void Backend::setSelected(int index, bool selected) { if (index < 0 || index >= m_files.size()) return; if (selected) m_selected.insert(index); else m_selected.remove(index); emit changed(); }
 void Backend::selectAll(bool selected) { m_selected.clear(); if (selected) for (int i = 0; i < m_files.size(); ++i) m_selected.insert(i); emit changed(); }
